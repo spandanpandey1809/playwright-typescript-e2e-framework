@@ -1,0 +1,21 @@
+{
+  "name": "playwright-typescript-e2e-framework",
+  "version": "1.0.0",
+  "description": "End-to-end UI and API test automation with Playwright and TypeScript",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=chromium",
+    "test:headed": "playwright test --project=chromium --headed",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report"
+  },
+  "author": "Spandan Pandey",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}
