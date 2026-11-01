@@ -37,6 +37,17 @@ export class ProductsPage extends BasePage {
   async openDetails(name: string): Promise<void> {
     await this.card(name).getByRole('link', { name: 'View Product' }).click();
   }
+
+  /**
+   * Hovering a card slides an overlay over it, which then covers the card's own
+   * "Add to cart" link. So hover first and click the overlay's button.
+   */
+  async addToCart(name: string): Promise<void> {
+    const card = this.card(name);
+    await card.hover();
+    await card.locator('.product-overlay .add-to-cart').click();
+    await this.cartModal.waitFor();
+  }
 }
 
 function escapeRegex(text: string): string {

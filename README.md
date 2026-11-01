@@ -26,8 +26,9 @@ src/
 ├── api/StoreApi.ts        # service layer: one method per endpoint, returns HTTP status + parsed body
 ├── api/types.ts           # typed response models
 ├── fixtures/test.ts       # custom fixtures: page objects, API client, ad blocking, throwaway users
-├── pages/                 # Page Objects: Home, Products, Product details, Login, Signup
-└── utils/userFactory.ts   # unique test users, overridable per scenario
+├── pages/                 # Page Objects: Home, Products, Product details, Login, Signup, Cart, Checkout
+├── utils/userFactory.ts   # unique test users, overridable per scenario
+└── utils/price.ts         # "Rs. 1500" <-> 1500, so tests can do arithmetic on prices
 tests/
 ├── api/                   # API specs (no browser)
 └── ui/                    # browser specs
@@ -44,6 +45,8 @@ playwright.config.ts       # "api" and "chromium" projects, retries, trace/video
 | Account API | Create, read, verify login, delete; duplicate email, wrong password, missing parameter, unsupported method |
 | Products UI | Home page, catalogue count matches the API, search results match the search API, product details match API data |
 | Login and signup UI | Log in and out, invalid logins (data-driven), full signup and account deletion, duplicate email |
+| Cart UI | Add from catalogue (prices and totals match the API), quantity from product page, remove to empty cart |
+| Checkout UI | Guest is asked to log in; logged-in user: addresses from the account, total = price x quantity, payment, order confirmation |
 
 ## How to run
 
@@ -66,5 +69,6 @@ npm run report            # open the HTML report
 - **UI checked against the API:** UI tests read the expected data from the API, so they never hard-code product names or counts that change.
 - **Ad blocking in a fixture:** the site's Google ads open full-screen pop-ups mid-test. The `page` fixture aborts ad and tracker requests, so every test gets it automatically and runs faster.
 - **A throwaway user per test:** the `newUser` fixture creates an account through the API before the test and deletes it afterwards, even if the test fails. No shared accounts, so tests stay independent and parallel-safe.
+- **Clicks that work like a user's:** hovering a product card slides an overlay over its "Add to cart" link, so the page object hovers and clicks the overlay's button instead of forcing a click.
 - **`data-qa` as the test id:** `testIdAttribute` is set to `data-qa`, the attribute the site's forms already use, so `getByTestId()` works without extra markup.
 - **Status in the body:** the API always returns HTTP 200 with the real status in `responseCode`, and labels JSON as `text/html`. The service layer parses the body itself and tests assert on `responseCode`.

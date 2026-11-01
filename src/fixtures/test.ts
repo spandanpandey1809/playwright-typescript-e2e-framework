@@ -1,4 +1,6 @@
 import { test as base } from '@playwright/test';
+import { CartPage } from '../pages/CartPage';
+import { CheckoutPage, PaymentPage } from '../pages/CheckoutPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProductDetailsPage } from '../pages/ProductDetailsPage';
@@ -30,6 +32,9 @@ type Fixtures = {
   productDetailsPage: ProductDetailsPage;
   loginPage: LoginPage;
   signupPage: SignupPage;
+  cartPage: CartPage;
+  checkoutPage: CheckoutPage;
+  paymentPage: PaymentPage;
   api: StoreApi;
   /** A fresh account created through the API, deleted again after the test. */
   newUser: TestUser;
@@ -46,6 +51,9 @@ export const test = base.extend<Fixtures>({
   productDetailsPage: async ({ page }, use) => use(new ProductDetailsPage(page)),
   loginPage: async ({ page }, use) => use(new LoginPage(page)),
   signupPage: async ({ page }, use) => use(new SignupPage(page)),
+  cartPage: async ({ page }, use) => use(new CartPage(page)),
+  checkoutPage: async ({ page }, use) => use(new CheckoutPage(page)),
+  paymentPage: async ({ page }, use) => use(new PaymentPage(page)),
   api: async ({ request }, use) => use(new StoreApi(request)),
 
   newUser: async ({ api }, use) => {
