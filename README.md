@@ -11,8 +11,9 @@ Part of my test automation portfolio, with [restassured-selenium-testng-framewor
 | UI testing | Playwright Test, Page Object Model, web-first assertions, auto-waiting |
 | API testing | Playwright `APIRequestContext`, typed service layer |
 | Test design | Custom fixtures, tags (`@smoke`), soft assertions, data-driven tests |
-| Reporting | Playwright HTML report with trace, screenshot and video on failure |
-| CI/CD | GitHub Actions: push, pull request, nightly schedule |
+| Cross-browser | Chromium (full suite); Firefox, WebKit (Safari), Pixel 7 and iPhone 14 viewports (@smoke subset) |
+| Reporting | Playwright HTML report with trace, screenshot and video on failure, merged across shards |
+| CI/CD | GitHub Actions: tests split across 2 parallel shards, push, pull request, nightly schedule |
 | Language | TypeScript (strict mode), Node.js 22 |
 
 ## Application under test
@@ -33,7 +34,8 @@ src/
 tests/
 ├── api/                   # API specs (no browser)
 └── ui/                    # browser specs; ui/logged-in/ start from a saved session
-playwright.config.ts       # "api" and "chromium" projects, retries, trace/video settings
+src/global-setup.ts        # pre-flight: fails fast with a clear message if the site is down or showing a bot check
+playwright.config.ts       # api, chromium, firefox, webkit and mobile projects; retries, trace/video settings
 ```
 
 ## Test coverage
@@ -56,12 +58,15 @@ Requires Node.js 18+.
 
 ```bash
 npm ci
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 
 npm test                  # everything
 npm run test:api          # API only
 npm run test:ui           # browser only
 npx playwright test --grep @smoke
+npx playwright test --project=webkit         # one browser
+npx playwright test --project=mobile-safari  # iPhone viewport
+npx playwright test --shard=1/2              # half the suite, as one CI shard does
 npm run test:headed       # watch the browser
 npm run report            # open the HTML report
 ```
@@ -73,5 +78,8 @@ npm run report            # open the HTML report
 - **A throwaway user per test:** the `newUser` fixture creates an account through the API before the test and deletes it afterwards, even if the test fails. No shared accounts, so tests stay independent and parallel-safe.
 - **Log in once per worker, not once per test:** `fixtures/auth.ts` creates an account per parallel worker, logs in through the UI once and saves the cookies with `storageState`. Tests in `ui/logged-in/` start already logged in. It is one account per worker rather than one for the whole run because the site keeps the cart on the server, so parallel tests sharing a user would see each other's cart. These tests never click Logout, which would end the shared session.
 - **Clicks that work like a user's:** hovering a product card slides an overlay over its "Add to cart" link, so the page object hovers and clicks the overlay's button instead of forcing a click.
+- **Full suite on one browser, smoke on the rest:** every UI test runs on Chromium; the `@smoke` tests also run on Firefox, WebKit and two phone viewports. That catches browser and layout problems without running everything five times against a shared public site.
+- **Sharding with merged reports:** CI splits the tests across two parallel jobs (`--shard`). Each writes a blob report, and a final job merges them into one HTML report.
+- **Fail fast on a broken environment:** the site sometimes shows a "One moment, please..." bot check instead of the store. `global-setup.ts` checks the API first and stops the run with one clear message, instead of dozens of misleading test failures.
 - **`data-qa` as the test id:** `testIdAttribute` is set to `data-qa`, the attribute the site's forms already use, so `getByTestId()` works without extra markup.
 - **Status in the body:** the API always returns HTTP 200 with the real status in `responseCode`, and labels JSON as `text/html`. The service layer parses the body itself and tests assert on `responseCode`.
