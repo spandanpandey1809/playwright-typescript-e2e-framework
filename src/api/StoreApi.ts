@@ -1,5 +1,11 @@
 import { type APIRequestContext, type APIResponse } from '@playwright/test';
-import type { BrandsResponse, MessageResponse, ProductsResponse } from './types';
+import type { TestUser } from '../utils/userFactory';
+import type {
+  BrandsResponse,
+  MessageResponse,
+  ProductsResponse,
+  UserDetailsResponse,
+} from './types';
 
 /**
  * Service layer for the Automation Exercise API (https://automationexercise.com/api_list).
@@ -15,6 +21,8 @@ export interface ApiResult<T> {
 
 export class StoreApi {
   constructor(private readonly request: APIRequestContext) {}
+
+  // ---- Products ----
 
   getProducts(): Promise<ApiResult<ProductsResponse>> {
     return this.call(this.request.get('/api/productsList'));
@@ -38,6 +46,54 @@ export class StoreApi {
 
   searchWithoutTerm(): Promise<ApiResult<MessageResponse>> {
     return this.call(this.request.post('/api/searchProduct'));
+  }
+
+  // ---- Accounts ----
+
+  createAccount(user: TestUser): Promise<ApiResult<MessageResponse>> {
+    return this.call(
+      this.request.post('/api/createAccount', {
+        form: {
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          title: user.title,
+          birth_date: user.birthDay,
+          birth_month: user.birthMonth,
+          birth_year: user.birthYear,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          company: user.company,
+          address1: user.address1,
+          address2: user.address2,
+          country: user.country,
+          zipcode: user.zipcode,
+          state: user.state,
+          city: user.city,
+          mobile_number: user.mobileNumber,
+        },
+      }),
+    );
+  }
+
+  deleteAccount(email: string, password: string): Promise<ApiResult<MessageResponse>> {
+    return this.call(this.request.delete('/api/deleteAccount', { form: { email, password } }));
+  }
+
+  verifyLogin(email: string, password: string): Promise<ApiResult<MessageResponse>> {
+    return this.call(this.request.post('/api/verifyLogin', { form: { email, password } }));
+  }
+
+  verifyLoginWithoutEmail(password: string): Promise<ApiResult<MessageResponse>> {
+    return this.call(this.request.post('/api/verifyLogin', { form: { password } }));
+  }
+
+  deleteVerifyLogin(): Promise<ApiResult<MessageResponse>> {
+    return this.call(this.request.delete('/api/verifyLogin'));
+  }
+
+  getUserByEmail(email: string): Promise<ApiResult<UserDetailsResponse & MessageResponse>> {
+    return this.call(this.request.get('/api/getUserDetailByEmail', { params: { email } }));
   }
 
   private async call<T>(pending: Promise<APIResponse>): Promise<ApiResult<T>> {

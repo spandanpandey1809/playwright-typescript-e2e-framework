@@ -30,3 +30,24 @@ export interface MessageResponse {
   responseCode: number;
   message: string;
 }
+
+export interface UserDetails {
+  id: number;
+  name: string;
+  email: string;
+  title: string;
+  first_name: string;
+  last_name: string;
+  company: string;
+  address1: string;
+  address2: string;
+  country: string;
+  state: string;
+  city: string;
+  zipcode: string;
+}
+
+export interface UserDetailsResponse {
+  responseCode: number;
+  user: UserDetails;
+}
