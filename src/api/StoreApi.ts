@@ -25,33 +25,33 @@ export class StoreApi {
   // ---- Products ----
 
   getProducts(): Promise<ApiResult<ProductsResponse>> {
-    return this.call(this.request.get('/api/productsList'));
+    return this.call(() => this.request.get('/api/productsList'));
   }
 
   postProducts(): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.post('/api/productsList'));
+    return this.call(() => this.request.post('/api/productsList'));
   }
 
   getBrands(): Promise<ApiResult<BrandsResponse>> {
-    return this.call(this.request.get('/api/brandsList'));
+    return this.call(() => this.request.get('/api/brandsList'));
   }
 
   putBrands(): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.put('/api/brandsList'));
+    return this.call(() => this.request.put('/api/brandsList'));
   }
 
   searchProducts(term: string): Promise<ApiResult<ProductsResponse>> {
-    return this.call(this.request.post('/api/searchProduct', { form: { search_product: term } }));
+    return this.call(() => this.request.post('/api/searchProduct', { form: { search_product: term } }));
   }
 
   searchWithoutTerm(): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.post('/api/searchProduct'));
+    return this.call(() => this.request.post('/api/searchProduct'));
   }
 
   // ---- Accounts ----
 
   createAccount(user: TestUser): Promise<ApiResult<MessageResponse>> {
-    return this.call(
+    return this.call(() =>
       this.request.post('/api/createAccount', {
         form: {
           name: user.name,
@@ -77,7 +77,7 @@ export class StoreApi {
   }
 
   deleteAccount(email: string, password: string): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.delete('/api/deleteAccount', { form: { email, password } }));
+    return this.call(() => this.request.delete('/api/deleteAccount', { form: { email, password } }));
   }
 
   /**
@@ -96,30 +96,40 @@ export class StoreApi {
   }
 
   verifyLogin(email: string, password: string): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.post('/api/verifyLogin', { form: { email, password } }));
+    return this.call(() => this.request.post('/api/verifyLogin', { form: { email, password } }));
   }
 
   verifyLoginWithoutEmail(password: string): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.post('/api/verifyLogin', { form: { password } }));
+    return this.call(() => this.request.post('/api/verifyLogin', { form: { password } }));
   }
 
   deleteVerifyLogin(): Promise<ApiResult<MessageResponse>> {
-    return this.call(this.request.delete('/api/verifyLogin'));
+    return this.call(() => this.request.delete('/api/verifyLogin'));
   }
 
   getUserByEmail(email: string): Promise<ApiResult<UserDetailsResponse & MessageResponse>> {
-    return this.call(this.request.get('/api/getUserDetailByEmail', { params: { email } }));
+    return this.call(() => this.request.get('/api/getUserDetailByEmail', { params: { email } }));
   }
 
-  private async call<T>(pending: Promise<APIResponse>): Promise<ApiResult<T>> {
-    const response = await pending;
-    const text = await response.text();
-    let body: T;
-    try {
-      body = JSON.parse(text) as T;
-    } catch {
-      throw new Error(`Expected JSON from ${response.url()} but got: ${text.slice(0, 200)}`);
+  /**
+   * Sends the request, retrying up to 3 times with a growing wait when the shared
+   * demo site answers with its "under heavy load" page or a 5xx error.
+   */
+  private async call<T>(send: () => Promise<APIResponse>): Promise<ApiResult<T>> {
+    const attempts = 3;
+    for (let attempt = 1; ; attempt++) {
+      const response = await send();
+      const text = await response.text();
+      const overloaded = response.status() >= 500 || /under heavy load/i.test(text);
+      if (overloaded && attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000 * attempt));
+        continue;
+      }
+      try {
+        return { httpStatus: response.status(), body: JSON.parse(text) as T };
+      } catch {
+        throw new Error(`Expected JSON from ${response.url()} but got: ${text.slice(0, 200)}`);
+      }
     }
-    return { httpStatus: response.status(), body };
   }
 }
