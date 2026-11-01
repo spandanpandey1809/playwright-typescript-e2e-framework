@@ -52,7 +52,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
 
   workerStorageState: [
-    async ({ browser, workerAccount }, use, workerInfo) => {
+    async ({ browser, playwright, workerAccount }, use, workerInfo) => {
+      // The config's testIdAttribute is only applied inside tests, not in worker fixtures,
+      // so set it here before the page objects call getByTestId()
+      playwright.selectors.setTestIdAttribute(workerInfo.project.use.testIdAttribute ?? 'data-testid');
+
       const file = path.join(workerInfo.project.outputDir, '.auth', `worker-${workerInfo.parallelIndex}.json`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
 
