@@ -45,7 +45,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
       await use(user);
 
-      await api.deleteAccount(user.email, user.password);
+      await api.deleteAccountQuietly(user.email, user.password);
       await context.dispose();
     },
     { scope: 'worker' },

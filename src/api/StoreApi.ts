@@ -80,6 +80,21 @@ export class StoreApi {
     return this.call(this.request.delete('/api/deleteAccount', { form: { email, password } }));
   }
 
+  /**
+   * Cleanup for fixtures: deletes the account but never throws. A test's result
+   * must not depend on whether the site was busy during teardown.
+   */
+  async deleteAccountQuietly(email: string, password: string): Promise<void> {
+    try {
+      const { body } = await this.deleteAccount(email, password);
+      if (body.responseCode !== 200 && body.responseCode !== 404) {
+        console.warn(`Cleanup: could not delete ${email}: ${JSON.stringify(body)}`);
+      }
+    } catch (error) {
+      console.warn(`Cleanup: could not delete ${email}: ${(error as Error).message.slice(0, 120)}`);
+    }
+  }
+
   verifyLogin(email: string, password: string): Promise<ApiResult<MessageResponse>> {
     return this.call(this.request.post('/api/verifyLogin', { form: { email, password } }));
   }

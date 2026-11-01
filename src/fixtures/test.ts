@@ -63,8 +63,8 @@ export const test = base.extend<Fixtures>({
       throw new Error(`Could not create test user: ${JSON.stringify(body)}`);
     }
     await use(user);
-    // Teardown runs even when the test fails; ignore "not found" if the test deleted it
-    await api.deleteAccount(user.email, user.password);
+    // Teardown runs even when the test fails, and never fails the test itself
+    await api.deleteAccountQuietly(user.email, user.password);
   },
 });
 
