@@ -42,9 +42,22 @@ type Fixtures = {
 
 export const test = base.extend<Fixtures>({
   // Overrides the built-in page fixture, so every UI test gets ad blocking for free
-  page: async ({ page }, use) => {
+  page: async ({ page }, use, testInfo) => {
     await page.route(isBlockedHost, (route) => route.abort());
     await use(page);
+
+    // If a test failed while the shared demo site was showing its overload or
+    // bot-check page, label it in the report so nobody chases a product bug
+    if (testInfo.status !== testInfo.expectedStatus) {
+      const body = await page.locator('body').innerText({ timeout: 2_000 }).catch(() => '');
+      const title = await page.title().catch(() => '');
+      if (/under heavy load|One moment, please/i.test(`${title} ${body}`)) {
+        testInfo.annotations.push({
+          type: 'environment',
+          description: 'The site was showing its overload or bot-check page when this test failed',
+        });
+      }
+    }
   },
   homePage: async ({ page }, use) => use(new HomePage(page)),
   productsPage: async ({ page }, use) => use(new ProductsPage(page)),

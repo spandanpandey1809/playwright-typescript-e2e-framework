@@ -12,6 +12,8 @@ Part of my test automation portfolio, with [restassured-selenium-testng-framewor
 | UI testing | Playwright Test, Page Object Model, web-first assertions, auto-waiting |
 | API testing | Playwright `APIRequestContext`, typed service layer |
 | Test design | Custom fixtures, tags (`@smoke`), soft assertions, data-driven tests |
+| Accessibility | axe-core scans of key pages against WCAG 2.1 A/AA, with a baseline of known issues |
+| Visual regression | `toHaveScreenshot` baselines for stable UI, recorded on Linux |
 | Cross-browser | Chromium (full suite); Firefox, WebKit (Safari), Pixel 7 and iPhone 14 viewports (@smoke subset) |
 | Reporting | Playwright HTML report with trace, screenshot and video on failure, merged across shards and published to GitHub Pages |
 | Containers | Docker image based on the official Playwright image |
@@ -32,10 +34,13 @@ src/
 ├── fixtures/auth.ts       # logged-in tests: one account + saved session (storageState) per worker
 ├── pages/                 # Page Objects: Home, Products, Product details, Login, Signup, Cart, Checkout
 ├── utils/userFactory.ts   # unique test users, overridable per scenario
-└── utils/price.ts         # "Rs. 1500" <-> 1500, so tests can do arithmetic on prices
+├── utils/price.ts         # "Rs. 1500" <-> 1500, so tests can do arithmetic on prices
+└── utils/a11yBaseline.ts  # accessibility issues the site already has, per page
 tests/
 ├── api/                   # API specs (no browser)
-└── ui/                    # browser specs; ui/logged-in/ start from a saved session
+└── ui/                    # browser specs; ui/logged-in/ start from a saved session;
+                           # visual.spec.ts-snapshots/ holds the screenshot baselines
+Dockerfile                 # test image on the official Playwright image
 src/global-setup.ts        # pre-flight: fails fast with a clear message if the site is down or showing a bot check
 playwright.config.ts       # api, chromium, firefox, webkit and mobile projects; retries, trace/video settings
 ```
@@ -52,6 +57,8 @@ playwright.config.ts       # api, chromium, firefox, webkit and mobile projects;
 | Login and signup UI | Log in and out, invalid logins (data-driven), full signup and account deletion, duplicate email |
 | Cart UI | Add from catalogue (prices and totals match the API), quantity from product page, remove to empty cart |
 | Saved session | Starts logged in, session reused in a new browser context, order placed without a login step |
+| Accessibility | Home, login, products and cart pages scanned with axe; fails on any new WCAG 2.1 A/AA issue |
+| Visual | Login and signup forms, login error state (inputs masked), header navigation |
 | Checkout UI | Guest is asked to log in; logged-in user: addresses from the account, total = price x quantity, payment, order confirmation |
 
 ## How to run
@@ -66,6 +73,8 @@ npm test                  # everything
 npm run test:api          # API only
 npm run test:ui           # browser only
 npx playwright test --grep @smoke
+npx playwright test --grep @a11y               # accessibility scans
+npx playwright test --grep @visual --update-snapshots   # re-record screenshots (Linux)
 npx playwright test --project=webkit         # one browser
 npx playwright test --project=mobile-safari  # iPhone viewport
 npx playwright test --shard=1/2              # half the suite, as one CI shard does
@@ -99,5 +108,8 @@ docker run --rm -v "$PWD/playwright-report:/tests/playwright-report" -e CI= pw-t
 - **Sharding with merged reports:** CI splits the tests across two parallel jobs (`--shard`). Each writes a blob report, and a final job merges them into one HTML report.
 - **Fail fast on a broken environment:** the site sometimes shows a "One moment, please..." bot check instead of the store. `global-setup.ts` checks the API first and stops the run with one clear message, instead of dozens of misleading test failures.
 - **Docker image pinned to the Playwright version:** the base image tag matches `@playwright/test` in `package.json`, so the browsers in the container are exactly the ones the library expects.
+- **Accessibility baseline instead of a permanent red test:** the demo site already has contrast and unlabelled-button issues we can't fix. Known issues per page are recorded in `a11yBaseline.ts`; a test fails only when a new rule is violated, and notes when a known issue has been fixed. The full axe output is attached to every report.
+- **Visual baselines on Linux only:** fonts render differently across operating systems, so screenshots are recorded on Linux (CI and Docker) and other platforms skip the visual tests. Dynamic content such as typed test data is masked.
+- **Environment failures are labelled:** if a test fails while the site shows its overload or bot-check page, the report marks it as an environment problem.
 - **`data-qa` as the test id:** `testIdAttribute` is set to `data-qa`, the attribute the site's forms already use, so `getByTestId()` works without extra markup.
 - **Status in the body:** the API always returns HTTP 200 with the real status in `responseCode`, and labels JSON as `text/html`. The service layer parses the body itself and tests assert on `responseCode`.
