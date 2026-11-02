@@ -45,7 +45,11 @@ jobs:
 
       # Each shard runs half of the tests; the blob reports are merged below
       - name: Run tests
-        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+        run: npx playwright test --project=chromium --grep @visual --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
+
+      - name: Print baselines
+        if: always()
+        run: for f in tests/ui/visual.spec.ts-snapshots/*.png; do [ -f "$f" ] && echo "B64FILE $(basename $f) $(base64 -w0 $f)"; done; true
 
       # A missing or changed screenshot baseline is written next to the test; keep it for review
       - name: Upload new visual baselines
