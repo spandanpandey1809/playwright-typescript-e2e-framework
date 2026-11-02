@@ -23,7 +23,11 @@ export default defineConfig({
   retries: isCI ? 1 : 0,
   workers: isCI ? 2 : undefined,
   timeout: 45_000,
-  expect: { timeout: 10_000 },
+  expect: {
+    timeout: 10_000,
+    // Small tolerance for anti-aliasing; real layout changes are far bigger
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled' },
+  },
 
   // In CI each shard writes a blob report; the workflow merges them into one HTML report
   reporter: isCI ? [['list'], ['blob']] : [['list'], ['html', { open: 'never' }]],

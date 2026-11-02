@@ -47,6 +47,16 @@ jobs:
       - name: Run tests
         run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
+      # A missing or changed screenshot baseline is written next to the test; keep it for review
+      - name: Upload new visual baselines
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: visual-baselines-${{ matrix.shardIndex }}
+          path: tests/**/*-snapshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload blob report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v5
