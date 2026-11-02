@@ -1,6 +1,7 @@
 # Playwright + TypeScript E2E Framework
 
 ![Playwright Tests](https://github.com/spandanpandey1809/playwright-typescript-e2e-framework/actions/workflows/playwright.yml/badge.svg)
+[![Live report](https://img.shields.io/badge/Playwright-live%20report-2EAD33)](https://spandanpandey1809.github.io/playwright-typescript-e2e-framework/)
 
 UI and API test automation for an e-commerce site with **Playwright** and **TypeScript**, run on every push and nightly in GitHub Actions.
 
@@ -12,7 +13,8 @@ Part of my test automation portfolio, with [restassured-selenium-testng-framewor
 | API testing | Playwright `APIRequestContext`, typed service layer |
 | Test design | Custom fixtures, tags (`@smoke`), soft assertions, data-driven tests |
 | Cross-browser | Chromium (full suite); Firefox, WebKit (Safari), Pixel 7 and iPhone 14 viewports (@smoke subset) |
-| Reporting | Playwright HTML report with trace, screenshot and video on failure, merged across shards |
+| Reporting | Playwright HTML report with trace, screenshot and video on failure, merged across shards and published to GitHub Pages |
+| Containers | Docker image based on the official Playwright image |
 | CI/CD | GitHub Actions: tests split across 2 parallel shards, push, pull request, nightly schedule |
 | Language | TypeScript (strict mode), Node.js 22 |
 
@@ -71,6 +73,21 @@ npm run test:headed       # watch the browser
 npm run report            # open the HTML report
 ```
 
+### Live report
+
+Every main-branch run publishes the merged HTML report to GitHub Pages: **[live test report](https://spandanpandey1809.github.io/playwright-typescript-e2e-framework/)**. Open a failed test to see its trace, screenshot and video.
+
+### Run in Docker
+
+No local Node.js or browsers needed. The image is built on the official Playwright image, which ships every browser with its system libraries, so a run in the container behaves the same as in CI.
+
+```bash
+docker build -t pw-tests .
+docker run --rm pw-tests                                                  # API tests (default)
+docker run --rm -e PW_ARGS="--project=chromium --grep @smoke" pw-tests    # UI smoke tests
+docker run --rm -v "$PWD/playwright-report:/tests/playwright-report" -e CI= pw-tests   # keep the HTML report
+```
+
 ## Design decisions
 
 - **UI checked against the API:** UI tests read the expected data from the API, so they never hard-code product names or counts that change.
@@ -81,5 +98,6 @@ npm run report            # open the HTML report
 - **Full suite on one browser, smoke on the rest:** every UI test runs on Chromium; the `@smoke` tests also run on Firefox, WebKit and two phone viewports. That catches browser and layout problems without running everything five times against a shared public site.
 - **Sharding with merged reports:** CI splits the tests across two parallel jobs (`--shard`). Each writes a blob report, and a final job merges them into one HTML report.
 - **Fail fast on a broken environment:** the site sometimes shows a "One moment, please..." bot check instead of the store. `global-setup.ts` checks the API first and stops the run with one clear message, instead of dozens of misleading test failures.
+- **Docker image pinned to the Playwright version:** the base image tag matches `@playwright/test` in `package.json`, so the browsers in the container are exactly the ones the library expects.
 - **`data-qa` as the test id:** `testIdAttribute` is set to `data-qa`, the attribute the site's forms already use, so `getByTestId()` works without extra markup.
 - **Status in the body:** the API always returns HTTP 200 with the real status in `responseCode`, and labels JSON as `text/html`. The service layer parses the body itself and tests assert on `responseCode`.

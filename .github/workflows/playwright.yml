@@ -90,3 +90,45 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 14
+
+      # Only main-branch runs (push, nightly, manual) publish the live report
+      - name: Package report for GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: playwright-report
+
+  publish-report:
+    name: Publish report to GitHub Pages
+    needs: merge-reports
+    if: ${{ !cancelled() && needs.merge-reports.result == 'success' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    # Publishing the report must never turn the test pipeline red
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy report
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  docker:
+    name: API tests in Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Build the test image
+        run: docker build -t pw-tests .
+
+      # Light suite only: the full suite already runs above against the same public site
+      - name: Run API tests in the container
+        run: docker run --rm -v "$PWD/test-results:/tests/test-results" pw-tests
